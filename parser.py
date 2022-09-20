@@ -141,7 +141,6 @@ def get_company_info(company_url: str):
     if "Адрес" in company_result.keys():
         company_result["Адрес"] = unify_address(company_result["Адрес"])
 
-
     known_companies.append(company_result)
     return company_result
 
@@ -232,7 +231,6 @@ def write_db_company(company_info: dict):
             ("{companies_table_company_name}", 
              "{companies_table_additional_info}");
     """)
-
 
 
 def update_database(houses_urls: list):
