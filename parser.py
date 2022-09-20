@@ -1,9 +1,10 @@
-from bs4 import BeautifulSoup       # Parsing
-import requests                     # Get html to parse
-import dadata                       # Unifying addresses with geocoder
+import re                           # Clean results
 import json                         # json export
 import time                         # Delay between requests
-import re                           # Clean results
+
+import dadata                       # Unifying addresses with geocoder
+import requests                     # Get html to parse
+from bs4 import BeautifulSoup       # Parsing
 
 
 REQUEST_DELAY_TIME_SEC = 0
