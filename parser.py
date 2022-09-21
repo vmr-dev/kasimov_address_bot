@@ -22,23 +22,26 @@ known_companies = []
 
 
 ################################################################
-#                  Базовый алгоритм парсинга                   #
+#                  Basic parsing algorithm                     #
 ################################################################
-# 1. Находим страницу с началом таблицы адресов домов
-# 2. Вытаскиваем url-ы с информацией по каждому дому
-# 3. Собираем по каждому полученному url информацию об адресах
-#    - При этом сохраняем ссылку на компанию (если есть),
+# 1. We find the page with the beginning of the table of 
+#    addresses of houses
+# 2. We pull out urls with information on each house
+# 3. We collect information about the addresses for each 
+#    received url - At the same time, we keep the link to 
+#    the company (if any),
 #
-# 4. Для каждого адреса (дома) собираем информацию о его компании,
-#    для этого смотрим, есть ли у нас эти данные локально, если да
-#    то просто ссылаемся на них, иначе собираем инфо о компании и бросаем в
-#    список новую известную компанию
+# 4. For each address (house) we collect information about his company,
+#    o do this, we look to see if we have this data locally, if yes
+#    then we just link to them, otherwise we collect information 
+#    about the company and throw it into list a new well-known company
 #
-# 5. Обновление базы данных происходит прямо во время парсинга
-#    с помощью соответствующих функций
+# 5. The database is updated right during parsing
+#    using the appropriate functions
 
 
-# Выполняет запрос к базе данных и возвращает ответ в виде словаря
+# Executes a query to the database and returns a response in the
+# form of a dictionary
 def request_ydb_query(query):
     res = requests.get(YDB_PROCESSOR_URL, params={"query": query}).text
     return json.loads(res)
@@ -55,7 +58,6 @@ def decrypt_cloudflare_email(enc_key):
 def unify_address(address: str) -> str:
     unified = dadata_api.suggest("address", address)
     if not unified:
-        print("PAID API was used")
         unified = dadata_api.clean("address", address)
         assert unified
         return unified['result']
@@ -69,7 +71,7 @@ def get_delayed(url):
     return requests.get(url).text
 
 
-# Бегает по таблице и собирает url-ки домов
+# Runs through the table and collects URLs of houses
 def get_addresses_urls(table_entry) -> list:
     table_rows = table_entry.findAll("tr")
     address_info_urls = []
@@ -79,12 +81,11 @@ def get_addresses_urls(table_entry) -> list:
     return address_info_urls
 
 
-# Собирает все url домов со всей таблицы
+# Collects all urls of houses from the entire table
 def get_houses_urls_for_city(houses_table_url: str):
     page = 1
     houses_urls = []
     while True:
-        print("In processing:", page, "page")
         current_page_url = houses_table_url + f"?page={page}"
         current_page_html = get_delayed(current_page_url)
 
@@ -92,7 +93,6 @@ def get_houses_urls_for_city(houses_table_url: str):
         current_table = current_bs.find("tbody")
 
         if len(current_table.findAll("tr")) == 0:
-            print("Table is over")
             break
 
         houses_urls += get_addresses_urls(current_table)
@@ -178,10 +178,6 @@ def get_house_info(house_url: str):
         result_head = header.text
         result_body = value
 
-        # Debug:
-        # print('HEAD: "' + result_head + '"')
-        # print('VALUE: "' + result_body + '"')
-
         if "адрес" in header.text.lower():
             result_house_info[result_head] = unify_address(value)
             continue
@@ -245,7 +241,6 @@ def update_database(houses_urls: list):
             company_info = current_house_info["_meta_company_info"]
             write_db_company(company_info)
 
-        print(f"House ID {house_id} was processed successfully")
         house_id += 1
 
 
