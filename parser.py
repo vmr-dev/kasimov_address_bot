@@ -1,57 +1,19 @@
-################################################################
-#                      About this module                       #
-################################################################
-# This file contains functions for:
-# 1. Parsing data from https://dom.mingkh.ru/ (houses and companies info)
-# 2. Interacting with dadata API
-# 3. Interacting with YDB
-#
-# Essentials:
-# To use functions below you need:
-# 1. Set up YDB and service account with YDB.[editor/viewer] rights
-# 2. Create specific tables in the YDB
-# 2. Set up Yandex function
-#
 # Basic parsing algorithm
 # 1. Find a table of houses' addresses (dom.mingkh.ru/area/city/houses)
 # 2. Get all the houses urls from the table
 # 3. Traverse the url list and collect houses/companies info (scraping)
 #    * Also put companies data to known_companies list variable to cache them
 
-# TODO:
-# 1. Change additional_info value type in the YDB from String to JSON
-#
-# 2. Rearrange functions to separated .py modules (there is a code chaos already):
-#   - for working with database (maybe wrap it in some class)
-#   - for data parsing
-#   - for telegram-bot command handlers (update and query)
-#   - for working with dadata api and address unification
-#
-# 3. Add a class wrapper for database module (so we don't have to think
-#    about YDB driver initialization and other stuff)
-#
-# 4. Add a message queue integration for tasks
-#   (after telegram request-response test)
-
-
 import re                           # Clean results
-import os                           # Environment vars
 import time                         # Delay between requests
 
-import ydb                          # Remote Yandex DB
-import dadata                       # Unifying addresses with geocoder
 import requests                     # Get html to parse
 from bs4 import BeautifulSoup       # Parsing
 
+from dadata_address_suggester import unify_address
+
 
 REQUEST_DELAY_TIME_SEC = 0.1
-
-YDB_ENDPOINT = os.getenv("YDB_ENDPOINT")
-YDB_PATH = os.getenv("YDB_PATH")
-
-DADATA_API_KEY = os.getenv("DADATA_API_KEY")
-DADATA_SECRET_KEY = os.getenv("DADATA_SECRET_KEY")
-dadata_api = dadata.Dadata(DADATA_API_KEY, DADATA_SECRET_KEY)
 
 CITY = "kasimov"
 AREA = "ryazanskaya-oblast"
@@ -62,42 +24,12 @@ TARGET_HOUSES_TABLE_URL = f"{TARGET_SITE_DOMAIN}/{AREA}/{CITY}/houses"
 known_companies = []
 
 
-def make_ydb_connection() -> ydb.BaseSession:
-    driver = ydb.Driver(endpoint=YDB_ENDPOINT, database=YDB_PATH)
-    driver.wait(fail_fast=True, timeout=5)
-    session = driver.table_client.session().create()
-    return session
-
-
-def request_ydb_query(session: ydb.BaseSession, yql_query: str) -> list[dict]:
-    settings = \
-        ydb.BaseRequestSettings().with_timeout(3).with_operation_timeout(2)
-
-    result = session.transaction().execute(
-        yql_query,
-        commit_tx=True,
-        settings=settings
-    )
-    return result[0].rows
-
-
 def decrypt_cloudflare_email(enc_key):
     email = ""
     k = int(enc_key[:2], 16)
     for i in range(2, len(enc_key)-1, 2):
         email += chr(int(enc_key[i:i+2], 16) ^ k)
     return email
-
-
-def unify_address(address: str) -> str:
-    unified = dadata_api.suggest("address", address)
-    if not unified:
-        unified = dadata_api.clean("address", address)
-        assert unified
-        return unified['result']
-    else:
-        assert unified
-        return unified[0]['value']
 
 
 def get_delayed(url):
@@ -223,93 +155,3 @@ def get_house_info(house_url: str):
         result_house_info["_meta_company_info"] = get_company_info(url)
 
     return result_house_info
-
-
-def write_db_house(ydb_session, house_info: dict):
-    houses_table_address = house_info["Адрес"]
-    houses_table_additional_info = ""
-    houses_table_company_name = "null"
-
-    for key in house_info.keys():
-        if ("meta" in key) or ("адрес" in key.lower()):
-            continue
-        houses_table_additional_info += key + ": " + house_info[key] + '\n'
-
-    if "_meta_company_info" in house_info.keys():
-        houses_table_company_name = house_info["_meta_company_info"]["Наименование"]
-        houses_table_company_name = '"' + houses_table_company_name + '"'
-
-    request_ydb_query(ydb_session, f"""
-        REPLACE INTO houses (address, additional_info, company_name) VALUES
-            ("{houses_table_address}", 
-             "{houses_table_additional_info}", 
-              {houses_table_company_name});
-    """)
-
-
-def write_db_company(ydb_session, company_info: dict):
-    companies_table_company_name = company_info["Наименование"]
-    companies_table_additional_info = ""
-
-    for key in company_info.keys():
-        if 'url' in key:
-            continue
-
-        companies_table_additional_info += key + ": " + company_info[key] + '\n'
-
-    request_ydb_query(ydb_session, f"""
-        REPLACE INTO companies (name, additional_info) VALUES
-            ("{companies_table_company_name}", 
-             "{companies_table_additional_info}");
-    """)
-
-
-def update_database(ydb_session, houses_urls: list):
-    house_id = 1
-
-    for house_url in houses_urls:
-        current_house_info = get_house_info(house_url)
-        write_db_house(ydb_session, current_house_info)
-
-        if "_meta_company_info" in current_house_info.keys():
-            company_info = current_house_info["_meta_company_info"]
-            write_db_company(ydb_session, company_info)
-
-        house_id += 1
-
-
-# find table entry by its key value
-# if there is no appropriate value - return empty list
-def search_in_database(ydb_session, table: str, search_value: str) -> list[dict]:
-    if table == "companies":
-        key_name = "name"
-    elif table == "houses":
-        key_name = "address"
-    else:
-        return []
-
-    query = f"""
-        SELECT * FROM
-        {table}
-        WHERE
-        {key_name} = "{search_value}"
-    """
-    return request_ydb_query(ydb_session, query)
-
-
-# Main yandex function handler (this is an entry point for webhook)
-# we need to pass some command with event
-# and parse it with telegram-message-handler module
-def handler(event, context):
-    ydb_session = make_ydb_connection()
-    # YDB Query test for connection check
-    # res = requests_ydb_query(ydb_session, """
-    #     SELECT * FROM companies
-    # """)
-    # print(res)
-
-    return {
-        'statusCode': 200,
-        'body': 'Hello World!',
-    }
-
