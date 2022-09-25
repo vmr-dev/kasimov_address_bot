@@ -7,6 +7,7 @@ def create_client():
         endpoint_url='https://message-queue.api.cloud.yandex.net',
         region_name='ru-central1'
     )
+    
     return client
 
 
@@ -18,6 +19,7 @@ def create_queue(sqs_client, name_queue):
             "VisibilityTimeout": "60",
         }
     )
+    
     return response
 
 
