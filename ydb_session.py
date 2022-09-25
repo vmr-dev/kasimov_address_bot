@@ -5,6 +5,7 @@
 
 import os
 import ydb
+import json
 
 from parser import *
 
@@ -27,43 +28,39 @@ class YDBSession:
             commit_tx=True,
             settings=settings
         )
-        return result[0].rows
+        return result
 
     def _write_db_house(self, house_info: dict):
-        houses_table_address = house_info["Адрес"]
-        houses_table_additional_info = ""
-        houses_table_company_name = "null"
+        houses_table_address = '"' + house_info["Адрес"] + '"'
 
-        for key in house_info.keys():
-            if ("meta" in key) or ("адрес" in key.lower()):
-                continue
-            houses_table_additional_info += key + ": " + house_info[key] + '\n'
+        # Dict -> Json string for YQL query (see below)
+        houses_table_additional_info = json.dumps(house_info, indent=4)
 
         if "_meta_company_info" in house_info.keys():
             houses_table_company_name = house_info["_meta_company_info"]["Наименование"]
             houses_table_company_name = '"' + houses_table_company_name + '"'
+        else:
+            houses_table_company_name = "null"
 
         self._request_ydb_query(f"""
             REPLACE INTO houses (address, additional_info, company_name) VALUES
-                ("{houses_table_address}", 
-                 "{houses_table_additional_info}", 
-                  {houses_table_company_name});
+                (
+                    {houses_table_address},
+                    CAST(@@{houses_table_additional_info}@@ AS Json), 
+                    {houses_table_company_name}
+                );
         """)
 
     def _write_db_company(self, company_info: dict):
-        companies_table_company_name = company_info["Наименование"]
-        companies_table_additional_info = ""
-
-        for key in company_info.keys():
-            if 'url' in key:
-                continue
-
-            companies_table_additional_info += key + ": " + company_info[key] + '\n'
+        companies_table_company_name = '"' + company_info["Наименование"] + '"'
+        companies_table_additional_info = json.dumps(company_info, indent=4)
 
         self._request_ydb_query(f"""
             REPLACE INTO companies (name, additional_info) VALUES
-                ("{companies_table_company_name}", 
-                 "{companies_table_additional_info}");
+                (
+                    {companies_table_company_name},
+                    CAST(@@{companies_table_additional_info}@@ AS Json)
+                );
         """)
 
     def search_in_database(self, table: str, search_value: str) -> list[dict]:
