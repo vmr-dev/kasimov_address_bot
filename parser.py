@@ -90,10 +90,12 @@ def get_company_info(company_url: str):
             continue
 
         if header.text.strip() == "E-mail":
-            encrypted_email = value.find("a")["data-cfemail"]
-            decrypted_email = decrypt_cloudflare_email(encrypted_email)
-            value = decrypted_email.strip()
-            company_result[header.text] = value
+            if value.text == "[email protected]":
+                encrypted_email = value.find("a")
+                decrypted_email = decrypt_cloudflare_email(encrypted_email)
+                company_result[header.text] = decrypted_email.strip()
+            else:
+                company_result[header.text] = value.text.strip()
             continue
 
         value = value.text
