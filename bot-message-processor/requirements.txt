@@ -1,0 +1,5 @@
+ydb
+dadata
+requests
+python-telegram-bot
+beautifulsoup4
