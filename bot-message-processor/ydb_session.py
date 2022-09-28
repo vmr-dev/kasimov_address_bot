@@ -1,4 +1,7 @@
 # This class encapsulate all the DB logic
+# connection with YDB is establishing automatically
+# with ENDPOINTS from os.getenv()
+#
 # it has 2 public methods
 #   1. For searching in tables of DB
 #   2. For updating the whole DB with parser module
@@ -11,6 +14,8 @@ from parser import *
 
 YDB_ENDPOINT = os.getenv("YDB_ENDPOINT")
 YDB_PATH = os.getenv("YDB_PATH")
+if (not YDB_PATH) or (not YDB_ENDPOINT):
+    raise "YDB_PATH and YDB_ENDPOINT environment variables must be set"
 
 
 class YDBSession:
@@ -63,7 +68,7 @@ class YDBSession:
                 );
         """)
 
-    def search_in_database(self, table: str, search_value: str) -> list[dict]:
+    def search_in_database(self, table: str, search_value: str) -> list:
         if table == "companies":
             key_name = "name"
         elif table == "houses":
