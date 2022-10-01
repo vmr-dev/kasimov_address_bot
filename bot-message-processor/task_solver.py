@@ -143,6 +143,7 @@ def provide_address_info_to_user(chat_id, text):
             user_info = {'chat_id': chat_id, 'date': str(date.today()), 'paid_requests_count': 10}
             ydb_session._write_db_user(user_info)
             bot.send_message(chat_id, "DEBUG: Ты устарел, обновляем тебя, теперь у тебя 10 попыток")
+            provide_address_info_to_user(chat_id, text)
     else:
         user_info = {'chat_id': chat_id, 'date': str(date.today()), 'paid_requests_count': 10}
         ydb_session._write_db_user(user_info)
