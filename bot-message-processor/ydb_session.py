@@ -19,6 +19,7 @@ if (not YDB_PATH) or (not YDB_ENDPOINT):
 
 
 class YDBSession:
+
     def __init__(self):
         self._driver = ydb.Driver(endpoint=YDB_ENDPOINT, database=YDB_PATH)
         self._driver.wait(fail_fast=True, timeout=5)
@@ -68,11 +69,23 @@ class YDBSession:
                 );
         """)
 
+    def _write_db_user(self, user_info):
+        chat_id = user_info["chat_id"]
+        date = user_info['date']
+        paid_requests_count = user_info["paid_requests_count"]
+
+        self._request_ydb_query(f"""
+            REPLACE INTO users (chat_id, date, paid_requests_count) 
+            VALUES ("{chat_id}", "{date}", {paid_requests_count})
+        """)
+
     def search_in_database(self, table: str, search_value: str) -> list:
         if table == "companies":
             key_name = "name"
         elif table == "houses":
             key_name = "address"
+        elif table == "users":
+            key_name = "chat_id"
         else:
             return []
 
