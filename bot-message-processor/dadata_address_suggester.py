@@ -7,7 +7,7 @@ dadata_api = dadata.Dadata(DADATA_API_KEY, DADATA_SECRET_KEY)
 
 
 # UNRESTRICTED version of address unifier
-def unify_address(address: str, use_paid = True) -> str:
+def unify_address(address: str, use_paid=True) -> str:
     unified = dadata_api.suggest("address", address)
     if not unified:
         if use_paid:

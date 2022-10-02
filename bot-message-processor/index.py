@@ -1,11 +1,3 @@
-################################################################
-#                      About this module                       #
-################################################################
-# Usage:
-# 1. Set up YDB and service account with (ydb.editor, ydb.viewer) rights
-# 2. Create specific tables in the YDB
-# 3. Set up Yandex function and assign created service account to it
-
 from threading import Thread
 from task_solver import *
 

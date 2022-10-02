@@ -1,10 +1,6 @@
 # This class encapsulate all the DB logic
 # connection with YDB is establishing automatically
 # with ENDPOINTS from os.getenv()
-#
-# it has 2 public methods
-#   1. For searching in tables of DB
-#   2. For updating the whole DB with parser module
 
 import os
 import ydb
