@@ -10,7 +10,9 @@ import os
 import ydb
 import json
 
+from datetime import date
 from parser import *
+
 
 YDB_ENDPOINT = os.getenv("YDB_ENDPOINT")
 YDB_PATH = os.getenv("YDB_PATH")
@@ -71,12 +73,12 @@ class YDBSession:
 
     def _write_db_user(self, user_info):
         chat_id = user_info["chat_id"]
-        date = user_info['date']
+        user_date = user_info['date']
         paid_requests_count = user_info["paid_requests_count"]
 
         self._request_ydb_query(f"""
             REPLACE INTO users (chat_id, date, paid_requests_count) 
-            VALUES ("{chat_id}", "{date}", {paid_requests_count})
+            VALUES ("{chat_id}", "{user_date}", {paid_requests_count})
         """)
 
     def search_in_database(self, table: str, search_value: str) -> list:
@@ -110,3 +112,43 @@ class YDBSession:
                 self._write_db_company(company_info)
 
             house_id += 1
+
+    def has_user_paid_requests(self, chat_id):
+        user_info = self.search_in_database("users", chat_id)
+
+        # has no user record
+        # - create one and retrieve its info again
+        if not user_info[0].rows:
+            user_info = {
+                'chat_id': chat_id,
+                'date': str(date.today()),
+                'paid_requests_count': 10
+            }
+            self._write_db_user(user_info)
+            user_info = self.search_in_database("users", chat_id)
+
+        paid_requests_count = user_info[0].rows[0]['paid_requests_count']
+        user_date = user_info[0].rows[0]['date']
+
+        # update the user if its record is too old
+        if user_date != str(date.today()):
+            new_user_info = {
+                'chat_id': chat_id,
+                'date': str(date.today()),
+                'paid_requests_count': 10
+            }
+
+            self._write_db_user(new_user_info)
+
+        # now we have user record info
+        # and can check for his access rights
+        if paid_requests_count > 0:
+            paid_requests_count -= 1
+            user_info = {
+                'chat_id': chat_id,
+                'date': str(date.today()),
+                'paid_requests_count': paid_requests_count
+            }
+            self._write_db_user(user_info)  # update count of paid requests
+
+        return paid_requests_count > 0
