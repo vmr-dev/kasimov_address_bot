@@ -1,7 +1,6 @@
 import os
 import json
 
-from datetime import date
 
 from telegram import Bot
 from ydb_session import YDBSession
@@ -97,58 +96,41 @@ def get_filtered_company_info_str(ydb_row):
 
 def provide_address_info_to_user(chat_id, text):
     ydb_session = YDBSession()
-    # DEBUG BOT
     bot = Bot(BOT_TOKEN)
+    is_requests_paid = ydb_session.has_user_paid_requests(chat_id)
 
-    user_query = unify_address("Касимов " + text, False)
-    house_answer = ydb_session.search_in_database("houses", user_query)
-    user_info = ydb_session.search_in_database("users", chat_id)
+    # DEBUG:
+    unified_address = unify_address(text, is_requests_paid)
 
-    if user_info[0].rows:
-        bot.send_message(chat_id, "DEBUG: Пользователь найден")
-        paid_requests_count = user_info[0].rows[0]['paid_requests_count']
-        user_date = user_info[0].rows[0]['date']
+    if not text:
+        answer = "Ваш запрос не совсем понятен.\n"
+        answer += "Попробуйте уточнить свой запрос\n"
+        answer += "Если вам кажется, что это ошибка, то "
+        answer += "пожалуйста сообщите об этом @Админ\n"
+        bot.send_message(chat_id, answer)
+        return
 
-        if user_date == str(date.today()):
-            if paid_requests_count > 0:
-                paid_requests_count -= 1
-                user_info = {'chat_id': chat_id, 'date': str(date.today()), 'paid_requests_count': paid_requests_count}
-                ydb_session._write_db_user(user_info)
-                bot.send_message(chat_id, "DEBUG: Запрос выполнен. Оталось попыток " + str(paid_requests_count))
-                # От сюда идёт не мой код.
-                # If address exists (search result (rows) is not empty):
-                #   get filtered and formatted info about the house
-                # If address has company (first_row["company_name"] is not None)
-                #   get filtered and formatted info about the company also
-                if house_answer[0].rows:
-                    answer = get_filtered_house_info_answer(house_answer[0].rows[0])
-                    if house_answer[0].rows[0]["company_name"]:
-                        company_name = house_answer[0].rows[0]["company_name"]
-                        company_answer = ydb_session.search_in_database("companies", company_name)
-                        if company_answer[0].rows:
-                            answer += '\n' + get_filtered_company_info_str(company_answer[0].rows[0])
-                    else:
-                        answer += "\n\n🏢 Управляющая компания не найдена"
-                else:
-                    answer = "Я не смог найти ваш адрес в своей базе.\n"
-                    answer += "Попробуйте уточнить свой запрос\n"
-                    answer += "Если вам кажется, что это ошибка, то "
-                    answer += "пожалуйста сообщите об этом @Админ\n"
+    # address was recognized, so we can start searching in ydb
+    house_answer = ydb_session.search_in_database("houses", unified_address)
 
-                bot = Bot(BOT_TOKEN)
-                bot.send_message(chat_id, answer, parse_mode="Markdown")
-            else:
-                bot.send_message(chat_id, "DEBUG: Ваши попытки кончились")
+    if house_answer[0].rows:
+        answer = get_filtered_house_info_answer(house_answer[0].rows[0])
+        if house_answer[0].rows[0]["company_name"]:
+            company_name = house_answer[0].rows[0]["company_name"]
+            company_answer = ydb_session.search_in_database("companies", company_name)
+            if company_answer[0].rows:
+                answer += '\n' + get_filtered_company_info_str(company_answer[0].rows[0])
         else:
-            user_info = {'chat_id': chat_id, 'date': str(date.today()), 'paid_requests_count': 10}
-            ydb_session._write_db_user(user_info)
-            bot.send_message(chat_id, "DEBUG: Ты устарел, обновляем тебя, теперь у тебя 10 попыток")
-            provide_address_info_to_user(chat_id, text)
+            answer += "\n\n🏢 Управляющая компания не найдена"
     else:
-        user_info = {'chat_id': chat_id, 'date': str(date.today()), 'paid_requests_count': 10}
-        ydb_session._write_db_user(user_info)
-        bot.send_message(chat_id, "DEBUG: Нет пользователя, но мы его запишем. Твой ID " + str(chat_id))
-        provide_address_info_to_user(chat_id, text)
+        answer = "Я не смог найти ваш адрес в своей базе.\n"
+        answer += "Попробуйте уточнить свой запрос\n"
+        answer += "Если вам кажется, что это ошибка, то "
+        answer += "пожалуйста сообщите об этом @Админ\n"
+
+    bot = Bot(BOT_TOKEN)
+    bot.send_message(chat_id, answer, parse_mode="Markdown")
+
 
 # Main command handler for tasks above
 def solve_task(chat_id, text):
