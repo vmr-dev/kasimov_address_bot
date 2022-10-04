@@ -99,8 +99,7 @@ def provide_address_info_to_user(chat_id, text):
     bot = Bot(BOT_TOKEN)
     is_requests_paid = ydb_session.has_user_paid_requests(chat_id)
 
-    # DEBUG:
-    unified_address = unify_address(text, is_requests_paid)
+    unified_address = unify_address("Касимов " + text, is_requests_paid)
 
     if not text:
         answer = "Ваш запрос не совсем понятен.\n"
