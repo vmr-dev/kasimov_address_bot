@@ -9,6 +9,7 @@ import json
 from datetime import date
 from parser import *
 
+DADATA_REQUESTS_PER_DAY_LIMIT = 10
 
 YDB_ENDPOINT = os.getenv("YDB_ENDPOINT")
 YDB_PATH = os.getenv("YDB_PATH")
@@ -118,7 +119,7 @@ class YDBSession:
             user_info = {
                 'chat_id': chat_id,
                 'date': str(date.today()),
-                'paid_requests_count': 10
+                'paid_requests_count': DADATA_REQUESTS_PER_DAY_LIMIT
             }
             self._write_db_user(user_info)
             user_info = self.search_in_database("users", chat_id)
@@ -131,10 +132,11 @@ class YDBSession:
             new_user_info = {
                 'chat_id': chat_id,
                 'date': str(date.today()),
-                'paid_requests_count': 10
+                'paid_requests_count': DADATA_REQUESTS_PER_DAY_LIMIT
             }
-
             self._write_db_user(new_user_info)
+            # after update user have at least 1 requests available
+            return DADATA_REQUESTS_PER_DAY_LIMIT > 0
 
         # now we have user record info
         # and can check for his access rights
