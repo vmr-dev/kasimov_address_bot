@@ -1,11 +1,15 @@
 import os
 import json
 
-
 from telegram import Bot
 from ydb_session import YDBSession
 
 from dadata_address_suggester import unify_address
+
+
+# example [1234124, 123124, 12431243]
+ADMIN_ID_LIST = []
+
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
@@ -31,6 +35,8 @@ def show_help(chat_id):
 
 
 def update_database(chat_id):
+    if chat_id not in ADMIN_ID_LIST:
+        return
     bot = Bot(BOT_TOKEN)
     response_msg = "Принято, обновляю базу"
     bot.send_message(chat_id, response_msg)
