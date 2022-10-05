@@ -137,6 +137,10 @@ def provide_address_info_to_user(chat_id, text):
     bot.send_message(chat_id, answer, parse_mode="Markdown")
 
 
+def reply_id(chat_id):
+    bot = Bot(BOT_TOKEN)
+    bot.send_message(chat_id, f"Ваш ID: `{chat_id}`", parse_mode="Markdown")
+
 # Main command handler for tasks above
 def solve_task(chat_id, text):
     if "/ping" in text:
@@ -145,5 +149,7 @@ def solve_task(chat_id, text):
         show_help(chat_id)
     elif "/update" in text:
         update_database(chat_id)
+    elif "/id" in text:
+        reply_id(chat_id)
     else:
         provide_address_info_to_user(chat_id, text)
