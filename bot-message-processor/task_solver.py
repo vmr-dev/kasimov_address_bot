@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 from telegram import Bot
 
@@ -96,7 +97,16 @@ def get_filtered_company_info_str(ydb_row):
     return result
 
 
+def is_address_valid(address: str):
+    has_digit = any(char.isdigit() for char in address)
+    has_only_russian_letters = bool(re.search('[а-яА-Я]', address))
+    return has_digit and has_only_russian_letters
+
+
 def provide_address_info_to_user(chat_id, text):
+    if not is_address_valid(text):
+        return
+
     ydb_session = YDBSession()
     bot = Bot(BOT_TOKEN)
     is_requests_paid = ydb_session.has_user_paid_requests(chat_id)
