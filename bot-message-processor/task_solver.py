@@ -9,6 +9,7 @@ from ydb_session import YDBSession
 
 # example [1234124, 123124, 12431243]
 ADMIN_ID_LIST = []
+ADMIN_CONTACTS = "@Админ:)"
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
@@ -117,7 +118,7 @@ def provide_address_info_to_user(chat_id, text):
         answer = "Ваш запрос не совсем понятен.\n"
         answer += "Попробуйте уточнить свой запрос\n"
         answer += "Если вам кажется, что это ошибка, то "
-        answer += "пожалуйста сообщите об этом @Админ\n"
+        answer += f"пожалуйста сообщите об этом {ADMIN_CONTACTS}\n"
         bot.send_message(chat_id, answer)
         return
 
@@ -137,7 +138,7 @@ def provide_address_info_to_user(chat_id, text):
         answer = "Я не смог найти ваш адрес в своей базе.\n"
         answer += "Попробуйте уточнить свой запрос\n"
         answer += "Если вам кажется, что это ошибка, то "
-        answer += "пожалуйста сообщите об этом @Админ\n"
+        answer += f"пожалуйста сообщите об этом {ADMIN_CONTACTS}\n"
 
     bot = Bot(BOT_TOKEN)
     bot.send_message(chat_id, answer, parse_mode="Markdown")
