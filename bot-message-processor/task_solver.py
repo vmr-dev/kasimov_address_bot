@@ -1,15 +1,13 @@
-import os
 import json
+import os
 
 from telegram import Bot
-from ydb_session import YDBSession
 
 from dadata_address_suggester import unify_address
-
+from ydb_session import YDBSession
 
 # example [1234124, 123124, 12431243]
 ADMIN_ID_LIST = []
-
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
@@ -67,12 +65,10 @@ def get_filtered_house_info_answer(ydb_row):
 
     additional_info = json.loads(ydb_row["additional_info"])
 
-    # Ищем по ключевым словам нужные нам ключи
-    # если нашли - добавляем
     for wanted in wanted_fields:
-        for info_key in additional_info.keys():
-            if wanted in info_key.lower():
-                result += '*' + info_key + '*: ' + additional_info[info_key] + '\n'
+        for key, value in additional_info.items():
+            if wanted in key.lower():
+                result += '*' + key + '*: ' + additional_info[key] + '\n'
 
     return result
 
@@ -93,9 +89,9 @@ def get_filtered_company_info_str(ydb_row):
     additional_info = json.loads(ydb_row["additional_info"])
 
     for wanted in wanted_fields:
-        for info_key in additional_info.keys():
-            if wanted in info_key.lower():
-                result += '*' + info_key + '*: ' + additional_info[info_key] + '\n'
+        for key, value in additional_info.items():
+            if wanted in key.lower():
+                result += '*' + key + '*: ' + additional_info[key] + '\n'
 
     return result
 
@@ -140,6 +136,7 @@ def provide_address_info_to_user(chat_id, text):
 def reply_id(chat_id):
     bot = Bot(BOT_TOKEN)
     bot.send_message(chat_id, f"Ваш ID: `{chat_id}`", parse_mode="Markdown")
+
 
 # Main command handler for tasks above
 def solve_task(chat_id, text):
