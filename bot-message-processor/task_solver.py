@@ -70,7 +70,7 @@ def get_filtered_house_info_answer(ydb_row):
     for wanted in wanted_fields:
         for key, value in additional_info.items():
             if wanted in key.lower():
-                result += '*' + key + '*: ' + additional_info[key] + '\n'
+                result += '*' + key + '*: ' + value + '\n'
 
     return result
 
@@ -93,7 +93,7 @@ def get_filtered_company_info_str(ydb_row):
     for wanted in wanted_fields:
         for key, value in additional_info.items():
             if wanted in key.lower():
-                result += '*' + key + '*: ' + additional_info[key] + '\n'
+                result += '*' + key + '*: ' + value + '\n'
 
     return result
 
